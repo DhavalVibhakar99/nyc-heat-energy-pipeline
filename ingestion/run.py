@@ -29,6 +29,13 @@ def run() -> dict:
 
     return {"rows": len(df), "file": key, "old": watermark, "new": new_watermark}
 
+def lambda_handler(event, context):
+    """The function AWS calls on each scheduled run.
+
+    event/context are unused on purpose - the watermark in SSM already says what to fetch,
+    so the Lambda needs no input. Same code path as running it locally.
+    """
+    return run()
 
 if __name__ == "__main__":
     print(run())
