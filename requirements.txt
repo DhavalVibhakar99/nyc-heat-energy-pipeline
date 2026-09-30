@@ -3,3 +3,5 @@ pandas
 pyarrow
 jupyter
 ipykernel
+boto3
+statsmodels
