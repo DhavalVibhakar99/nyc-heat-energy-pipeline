@@ -1,0 +1,17 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "WriteRawFilesOnly",
+      "Effect": "Allow",
+      "Action": "s3:PutObject",
+      "Resource": "arn:aws:s3:::heatwatch-nyc-raw-dhaval/raw/311_heat/*"
+    },
+    {
+      "Sid": "ReadAndMoveTheBookmark",
+      "Effect": "Allow",
+      "Action": ["ssm:GetParameter", "ssm:PutParameter"],
+      "Resource": "arn:aws:ssm:us-east-1:*:parameter/heatwatch/311/watermark"
+    }
+  ]
+}
