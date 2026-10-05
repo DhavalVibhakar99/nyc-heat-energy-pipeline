@@ -5,12 +5,19 @@ profile: heatwatch
 model-paths: ["models"]
 macro-paths: ["macros"]
 test-paths: ["tests"]
+analysis-paths: ["analyses"]
 
 models:
   heatwatch:
+    # cleaned, typed, deduplicated copies of raw - views, so they're always current
     staging:
       +schema: staging
       +materialized: view
+    # reusable building blocks that aren't meant for analysis on their own
+    intermediate:
+      +schema: staging
+      +materialized: view
+    # what analysis reads: built as tables once a day, so queries stay fast and cheap
     marts:
       +schema: marts
       +materialized: table

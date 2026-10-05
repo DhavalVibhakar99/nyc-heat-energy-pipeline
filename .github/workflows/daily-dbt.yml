@@ -1,0 +1,62 @@
+# Daily: load new raw files into Snowflake, then rebuild and test every dbt model.
+#
+# Runs at 06:30 UTC, after the 05:00 UTC ingestion Lambda (which finishes in under 6 minutes).
+# A failure anywhere - a bad load, a failing test, stale data - marks the run failed,
+# and GitHub emails the repo owner.
+#
+# Needs three repository secrets (Settings -> Secrets and variables -> Actions):
+#   SNOWFLAKE_ACCOUNT, SNOWFLAKE_USER, SNOWFLAKE_PRIVATE_KEY (contents of rsa_key.p8)
+
+name: daily-dbt
+
+on:
+  schedule:
+    - cron: "30 6 * * *"
+  workflow_dispatch:  # adds a "Run workflow" button for manual runs
+
+concurrency:
+  group: daily-dbt    # never let two runs overlap
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: dbt
+    env:
+      SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+      SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+      SNOWFLAKE_PRIVATE_KEY_PATH: ${{ github.workspace }}/rsa_key.p8
+      DBT_PROFILES_DIR: ${{ github.workspace }}/dbt
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dbt
+        run: pip install "dbt-snowflake~=1.12.0"
+
+      - name: Write the private key (never printed, deleted at the end)
+        env:
+          SNOWFLAKE_PRIVATE_KEY: ${{ secrets.SNOWFLAKE_PRIVATE_KEY }}
+        run: |
+          printf '%s\n' "$SNOWFLAKE_PRIVATE_KEY" > "$SNOWFLAKE_PRIVATE_KEY_PATH"
+          chmod 600 "$SNOWFLAKE_PRIVATE_KEY_PATH"
+
+      - name: Load new raw files from S3
+        run: dbt run-operation load_raw
+
+      - name: Build and test all models
+        run: dbt build
+
+      - name: Check the ingestion is still delivering
+        run: dbt source freshness
+
+      - name: Remove the private key
+        if: always()
+        run: rm -f "$SNOWFLAKE_PRIVATE_KEY_PATH"
