@@ -5,3 +5,4 @@ jupyter
 ipykernel
 boto3
 statsmodels
+dbt-snowflake

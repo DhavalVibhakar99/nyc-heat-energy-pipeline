@@ -221,3 +221,8 @@ lambda.zip
 out.json
 
 .venv-1/
+
+# dbt
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/
