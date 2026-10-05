@@ -41,6 +41,7 @@ flowchart LR
 | Layer | What it does | Where |
 |---|---|---|
 | Ingestion | Pulls 311 heat complaints changed since the last run, reconciled against the API's own row count | `ingestion/` (Lambda) |
+| | One-time backfill by creation month, for complaints older than the first run | `ingestion/backfill_311.py` |
 | | Pulls one Parquet file per LL84 report year | `ingestion/load_ll84.py` |
 | Raw | Every file, untouched, with the file it came from | `snowflake/0*.sql` |
 | Staging | One row per complaint and per property; types; LL84 BBLs normalized | `dbt/models/staging`, `intermediate` |
@@ -57,6 +58,9 @@ The full reasoning, with the evidence behind each decision, is in [docs/decision
 - **Reconcile, don't trust empty pages.** Two early runs silently stopped short and dropped
   ~211K rows. Extraction now asks the API for the expected count first, retries short pages,
   and refuses to write a partial load.
+- **Check the dataset, not just each run.** Per-run reconciliation passed every day, yet a
+  month-by-month comparison against the city found most of 2026 missing: incremental loads never
+  see complaints closed before the pipeline started. A one-time backfill by `created_date` fixed it.
 - **Raw keeps duplicates; staging removes them.** The city republishes nearly the whole dataset
   every ~2 days, so 1.1M raw rows hold 224K unique complaints. Staging keeps the latest version
   of each, across *all* files, because the newest file is not a full snapshot.
@@ -125,6 +129,7 @@ pip install -r requirements.txt
 export SNOWFLAKE_ACCOUNT=... SNOWFLAKE_USER=...
 
 python -m ingestion.run              # one 311 incremental load
+python -m ingestion.backfill_311 2024-10   # one-time: every complaint created since a month
 python -m ingestion.load_ll84 2025   # once a year, when the city publishes a new report year
 
 cd dbt
@@ -147,7 +152,7 @@ dbt source freshness                 # is the ingestion still delivering?
 ## Repository layout
 
 ```
-ingestion/          311 Lambda (run.py, extract_311.py, watermark.py, write_s3.py), LL84 loader
+ingestion/          311 Lambda (run.py, extract_311.py, watermark.py, write_s3.py), backfill, LL84 loader
 infra/              IAM policies for the Lambda and for Snowflake's read-only S3 access
 snowflake/          one-time setup: warehouse, storage integration, stages, raw tables
 dbt/                staging, intermediate and mart models, tests, load_raw macro

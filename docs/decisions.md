@@ -64,3 +64,28 @@ Runs `COPY INTO` (via `dbt run-operation load_raw`), then `dbt build`, then sour
 
 **Known shortcut:** dbt runs as ACCOUNTADMIN. A dedicated role with only the grants it needs
 is the right next step before anyone else uses this account.
+
+## The pipeline was missing most of 2026: added a one-time backfill (2026-10-05)
+Found by checking the dbt models against the notebook. Building counts matched exactly
+(16,719 lots), but January 2026 complaints came out 11% low, and the city's live count was
+unchanged (74,048). Monthly no-heat complaints, pipeline vs city:
+
+| Month | Pipeline | City |
+|---|---|---|
+| 2025-10 | 27,820 | 27,851 |
+| 2026-01 | 65,274 | 74,048 |
+| 2026-02 | 364 | 53,441 |
+| 2026-03 to 08 | ~0 | ~43,600 |
+
+**Cause:** the notebook planned "backfill, then go incremental," and only the incremental half
+was built. Watermark extraction sees rows the city touched after the first run; complaints that
+were filed and closed earlier never come through. New complaints are always caught (filing
+sets `:updated_at`), so this is a one-time historical hole, not an ongoing leak.
+
+**Fix:** `ingestion/backfill_311.py` pulls complaints by `created_date`, one reconciled file per
+month, into `raw/311_heat/backfill/`. Staging's existing dedup merges them with the daily files.
+Backfilled from 2024-10 so the mart has two complete heat seasons (2024-25 vs LL84 2023,
+2025-26 vs LL84 2024). The watermark is untouched.
+
+**Lesson:** reconciling each API call proved every *run* was complete, not that the *dataset* was.
+Comparing totals against the source by month is what caught it.
