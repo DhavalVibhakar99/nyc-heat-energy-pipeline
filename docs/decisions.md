@@ -18,3 +18,21 @@ Kept 2 GB / 10 min on purpose: the daily refresh will grow during heating season
 City refresh lands ~02:00 UTC (10 PM EDT). If it runs on NYC local time, it shifts to
 ~03:00 UTC when daylight saving ends. 05:00 UTC clears it in both seasons. Running too
 early would only delay data by a day (the watermark catches it next run), never lose it.
+## 311 reloads are recurring, not one-time (2026-10-05)
+Revises the 2026-09-29 entry. After the retry fix, full-size files (~220K rows) landed on
+09-30, 10-02 and 10-04. Watermark values cluster around 01:40 UTC every ~2 days, so the
+city republishes nearly the whole dataset on that cadence.
+- 09-28 and 09-29 (20,000 and 10,000 rows, exact page multiples) were truncated runs from
+  the pagination bug, not normal small days
+
+**Decision:** staging dedupes across ALL raw files (latest `:updated_at` per `unique_key`).
+The newest file is not a full snapshot: 1,649 complaints absent from it still exist,
+unchanged, in the city's live data (4 checked by hand). Result: 223,707 unique complaints
+from 1,138,659 raw rows.
+
+**Known limitation:** a complaint the city truly deletes would stay in staging forever.
+Not observed so far. Fix if needed: a periodic job comparing the city's current ID list.
+
+## Lambda retries + CLI timeouts are harmless (2026-10-05)
+A manual invoke ran 281 s; the CLI timed out and retried twice. The retries found nothing
+newer than the moved watermark and returned 0 rows. Idempotency working as designed.
