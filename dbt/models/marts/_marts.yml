@@ -1,0 +1,50 @@
+version: 2
+
+models:
+  - name: fct_heat_complaints
+    description: >
+      One row per HEAT/HOT WATER complaint. is_no_heat marks the complaints the analysis uses;
+      ll84_report_year is the LL84 year that existed when the complaint was filed.
+    columns:
+      - name: complaint_id
+        data_tests:
+          - unique
+          - not_null
+      - name: heat_season
+        description: Oct 1 - May 31, e.g. '2025-26'. NULL for Jun-Sep complaints.
+      - name: bbl
+        description: Clean 10-digit BBL, NULL if the complaint's BBL was missing or malformed.
+
+  - name: dim_lot_energy
+    description: >
+      One row per residential (Multifamily Housing) tax lot per LL84 report year.
+      Energy Star score is floor-area-weighted across the lot's scored properties.
+    columns:
+      - name: lot_year_id
+        data_tests:
+          - unique
+          - not_null
+      - name: energy_star_score
+        description: Weighted 1-100 score; NULL when no property on the lot has one.
+      - name: energy_star_band
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['1-25', '26-50', '51-75', '76-100']
+      - name: era
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['pre-1930', '1930-59', '1960-89', '1990+']
+
+  - name: mart_lot_heat_season
+    description: >
+      The analysis table: one row per residential lot per heat season, zeros included.
+      Filter to has_energy_star_score and is_season_complete for the notebook's comparison.
+    columns:
+      - name: lot_season_id
+        data_tests:
+          - unique
+          - not_null
+      - name: no_heat_per_100k_sqft
+        description: No-heat complaints per 100,000 sq ft of floor area.

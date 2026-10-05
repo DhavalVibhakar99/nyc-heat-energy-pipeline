@@ -1,0 +1,44 @@
+version: 2
+
+models:
+  - name: int_ll84_property_lots
+    description: >
+      One row per LL84 property per tax lot (BBL) per report year. BBLs normalized to the
+      10-digit format 311 uses; floor area split evenly across a property's lots.
+    columns:
+      - name: bbl
+        description: Clean 10-digit borough-block-lot.
+        data_tests:
+          - not_null
+      - name: gfa_share_sqft
+        description: The property's floor area divided by its number of lots.
+
+unit_tests:
+  # the five formats found in the notebook (cell "Normalizing BBLs"), now checked on every build
+  - name: clean_bbl_handles_every_known_format
+    model: int_ll84_property_lots
+    given:
+      - input: ref('stg_ll84_properties')
+        rows:
+          - {report_year: 2024, property_id: "clean", property_year_id: "2024-clean", bbl_raw: "1020690001", gfa_sqft: 1000}
+          - {report_year: 2024, property_id: "dashed", property_year_id: "2024-dashed", bbl_raw: "1-00545-0026", gfa_sqft: 1000}
+          - {report_year: 2024, property_id: "demo", property_year_id: "2024-demo", bbl_raw: "0000000001, 0000000002", gfa_sqft: 1000}
+          - {report_year: 2024, property_id: "campus", property_year_id: "2024-campus", bbl_raw: "3043930001;3043710001", gfa_sqft: 1000}
+          - {report_year: 2024, property_id: "missing", property_year_id: "2024-missing", bbl_raw: "Not Available", gfa_sqft: 1000}
+    expect:
+      rows:
+        - {property_id: "clean", bbl: "1020690001", n_lots: 1, gfa_share_sqft: 1000}
+        - {property_id: "dashed", bbl: "1005450026", n_lots: 1, gfa_share_sqft: 1000}
+        - {property_id: "campus", bbl: "3043930001", n_lots: 2, gfa_share_sqft: 500}
+        - {property_id: "campus", bbl: "3043710001", n_lots: 2, gfa_share_sqft: 500}
+
+  - name: clean_bbl_pads_short_dashed_parts
+    model: int_ll84_property_lots
+    given:
+      - input: ref('stg_ll84_properties')
+        rows:
+          - {report_year: 2024, property_id: "short", property_year_id: "2024-short", bbl_raw: "2-545-26", gfa_sqft: 100}
+          - {report_year: 2024, property_id: "odd", property_year_id: "2024-odd", bbl_raw: "1-2-3-4", gfa_sqft: 100}
+    expect:
+      rows:
+        - {property_id: "short", bbl: "2005450026", n_lots: 1, gfa_share_sqft: 100}

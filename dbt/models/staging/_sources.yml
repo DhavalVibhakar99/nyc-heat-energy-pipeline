@@ -8,5 +8,12 @@ sources:
     tables:
       - name: complaints_311
         description: One row per complaint per file. Duplicates expected (city republishes).
+        # alerts if the Lambda stops writing files. The city publishes about every 2 days.
+        # loaded_at is stored in the account's time zone (Pacific), so convert before comparing
+        config:
+          loaded_at_field: "convert_timezone('America/Los_Angeles', 'UTC', loaded_at)"
+          freshness:
+            warn_after: {count: 3, period: day}
+            error_after: {count: 5, period: day}
       - name: ll84_buildings
         description: One row per property per report-year file. A re-loaded year can appear twice.

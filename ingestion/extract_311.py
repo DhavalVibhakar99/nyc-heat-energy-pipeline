@@ -47,6 +47,12 @@ def fetch_since(watermark: str) -> tuple[pd.DataFrame, str | None]:
     upper = summary["upper"].rstrip("Z")
     where = f"{base} AND :updated_at <= '{upper}'"
 
+    df = _page_all(where, expected)
+    return df, upper
+
+
+def _page_all(where: str, expected: int) -> pd.DataFrame:
+    """Page through every row matching `where` until we have exactly `expected` of them."""
     # 2. page until we have exactly `expected` rows. every page should be full, except the last one.
     #    a short page isn't "the end" anymore - it's a hiccup, so wait and ask for the same page again
     pages, collected = [], 0
@@ -71,4 +77,18 @@ def fetch_since(watermark: str) -> tuple[pd.DataFrame, str | None]:
     # 3. reconcile anyway - belt and braces, and it documents the guarantee in code
     if len(df) != expected:
         raise RuntimeError(f"reconciliation failed: API says {expected:,} rows, we paged {len(df):,}")
-    return df, upper
+    return df
+
+
+def fetch_created_between(start: str, end: str) -> pd.DataFrame:
+    """Every heat complaint CREATED in [start, end), whenever it was last updated. For backfills.
+
+    fetch_since() only sees rows the city touched after the watermark, so complaints that were
+    filed and closed before the pipeline existed never come through it (see docs/decisions.md).
+    """
+    where = (f"complaint_type = 'HEAT/HOT WATER' "
+             f"AND created_date >= '{start}' AND created_date < '{end}'")
+    expected = int(_get({"$select": "count(*) AS n", "$where": where})[0]["n"])
+    if expected == 0:
+        return pd.DataFrame()
+    return _page_all(where, expected)

@@ -9,3 +9,19 @@ models:
         data_tests:
           - unique
           - not_null
+
+  - name: stg_ll84_properties
+    description: >
+      One row per LL84 property per report year, typed, from the latest load of each file.
+      Repeated properties within a year (city data quirk in 2022-23) keep the newest report.
+    columns:
+      - name: property_year_id
+        description: report_year-property_id. Proves the dedup worked.
+        data_tests:
+          - unique
+          - not_null
+      - name: report_year
+        data_tests:
+          - not_null
+      - name: energy_star_score
+        description: 1-100, NULL when the building has no score ("Not Available").
