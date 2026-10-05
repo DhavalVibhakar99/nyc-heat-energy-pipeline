@@ -219,3 +219,8 @@ __marimo__/
 build/
 lambda.zip
 out.json
+
+.venv-1/
+build/
+lambda.zip
+out.json
