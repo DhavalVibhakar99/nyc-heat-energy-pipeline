@@ -118,19 +118,19 @@ def pooled(df, by):
 
 
 st.subheader("1. Pooled together, efficiency barely matters")
-st.altair_chart(rate_chart(pooled(lots, ["band"]), "band", BAND_ORDER), use_container_width=True)
+st.altair_chart(rate_chart(pooled(lots, ["band"]), "band", BAND_ORDER), width="stretch")
 
 st.subheader("2. Split by building size, a pattern appears (Simpson's paradox)")
 st.altair_chart(rate_chart(pooled(lots, ["band", "size"]), "band", BAND_ORDER,
                            color="size", color_order=list(SIZE_LABELS.values())),
-                use_container_width=True)
+                width="stretch")
 st.caption("In smaller buildings, better scores go with fewer complaints. The largest buildings "
            "hold most of the floor area, so they hide that pattern in the pooled view.")
 
 st.subheader("3. Split by age, it's a prewar story")
 st.altair_chart(rate_chart(pooled(lots.dropna(subset=["era"]), ["band", "era"]), "band", BAND_ORDER,
                            color="era", color_order=ERA_ORDER),
-                use_container_width=True)
+                width="stretch")
 st.caption("Prewar buildings get far more complaints per square foot, and only there does "
            "efficiency clearly track with fewer complaints.")
 
@@ -148,7 +148,7 @@ top = query(f"""
     order by no_heat_per_100k_sqft desc
     limit 25
 """)
-st.dataframe(top, use_container_width=True)
+st.dataframe(top, width="stretch")
 
 # ---------------------------------------------------------------- map
 st.subheader("Where the complaints are")
