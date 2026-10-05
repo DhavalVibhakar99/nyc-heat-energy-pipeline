@@ -1,0 +1,12 @@
+version: 2
+
+sources:
+  - name: raw
+    database: heatwatch
+    schema: raw
+    description: Untouched copies of every file the ingestion writes to S3.
+    tables:
+      - name: complaints_311
+        description: One row per complaint per file. Duplicates expected (city republishes).
+      - name: ll84_buildings
+        description: One row per property per report-year file. A re-loaded year can appear twice.

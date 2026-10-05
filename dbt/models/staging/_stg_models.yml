@@ -1,0 +1,11 @@
+version: 2
+
+models:
+  - name: stg_complaints_311
+    description: One row per 311 heat complaint, latest version across all raw files.
+    columns:
+      - name: complaint_id
+        description: The city's unique_key.
+        data_tests:
+          - unique
+          - not_null

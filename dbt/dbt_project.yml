@@ -1,0 +1,16 @@
+name: heatwatch
+version: "1.0.0"
+profile: heatwatch
+
+model-paths: ["models"]
+macro-paths: ["macros"]
+test-paths: ["tests"]
+
+models:
+  heatwatch:
+    staging:
+      +schema: staging
+      +materialized: view
+    marts:
+      +schema: marts
+      +materialized: table
