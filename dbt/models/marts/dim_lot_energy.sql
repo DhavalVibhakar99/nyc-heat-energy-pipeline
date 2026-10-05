@@ -23,8 +23,10 @@ aggregated as (
         count(distinct property_id)                                                   as n_properties,
         sum(gfa_share_sqft)                                                           as total_gfa_sqft,
         sum(iff(energy_star_score is not null, gfa_share_sqft, null))                as scored_gfa_sqft,
-        sum(energy_star_score * gfa_share_sqft)
-            / nullif(sum(iff(energy_star_score is not null, gfa_share_sqft, null)), 0) as energy_star_score,
+        -- rounded: a lone score of 100 weighted by itself came out as 100.00000000001 in floating
+        -- point, which failed the 1-100 range test. 4 decimals removes the noise, keeps the precision
+        round(sum(energy_star_score * gfa_share_sqft)
+            / nullif(sum(iff(energy_star_score is not null, gfa_share_sqft, null)), 0), 4) as energy_star_score,
         max_by(year_built, gfa_share_sqft)                                            as year_built
     from lots
     group by report_year, bbl
