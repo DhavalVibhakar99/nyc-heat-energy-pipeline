@@ -1,8 +1,12 @@
-# Daily: load new raw files into Snowflake, then rebuild and test every dbt model.
+# Daily: load new raw files into Snowflake, rebuild and test every dbt model, then publish
+# the public dashboard (site/) to GitHub Pages with freshly exported data.
 #
 # Runs at 06:30 UTC, after the 05:00 UTC ingestion Lambda (which finishes in under 6 minutes).
 # A failure anywhere - a bad load, a failing test, stale data - marks the run failed,
-# and GitHub emails the repo owner.
+# and GitHub emails the repo owner. If the models or tests fail, nothing is published,
+# so the dashboard keeps showing yesterday's data rather than a broken build.
+#
+# One-time setup for the dashboard: Settings -> Pages -> Source: "GitHub Actions".
 #
 # Needs three repository secrets (Settings -> Secrets and variables -> Actions):
 #   SNOWFLAKE_ACCOUNT, SNOWFLAKE_USER, SNOWFLAKE_PRIVATE_KEY (contents of rsa_key.p8)
@@ -18,10 +22,15 @@ concurrency:
   group: daily-dbt    # never let two runs overlap
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    outputs:
+      exported: ${{ steps.upload.outcome == 'success' }}
     defaults:
       run:
         working-directory: dbt
@@ -54,9 +63,36 @@ jobs:
       - name: Build and test all models
         run: dbt build
 
+      - name: Export dashboard data
+        working-directory: .
+        run: python dashboard/export_public.py --out site/data --run-results dbt/target/run_results.json
+
+      - name: Package the dashboard
+        id: upload
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
       - name: Check the ingestion is still delivering
         run: dbt source freshness
 
       - name: Remove the private key
         if: always()
         run: rm -f "$SNOWFLAKE_PRIVATE_KEY_PATH"
+
+  # Publishes even if only the freshness check failed: the data is still correct, just not new.
+  deploy:
+    needs: build
+    if: always() && needs.build.outputs.exported == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Publish to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HeatWatch NYC</title>
+<meta name="description" content="Which NYC apartment buildings leave tenants without heat, and does energy efficiency matter? 311 heat complaints joined to Local Law 84 energy data, refreshed daily.">
+<meta property="og:title" content="HeatWatch NYC">
+<meta property="og:description" content="NYC heat complaints vs building energy efficiency, refreshed daily.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232a78d6'/%3E%3Cpath d='M16 7c3 4 5 6.5 5 10a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3-1-5 1-8.5z' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="topbar">
+  <div class="wrap topbar-in">
+    <a class="brand" href="#">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8"></rect><path d="M16 7c3 4 5 6.5 5 10a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3-1-5 1-8.5z"></path></svg>
+      <span>HeatWatch <span class="muted">NYC</span></span>
+    </a>
+    <div class="topbar-right">
+      <span class="live" id="live-badge" hidden><span class="live-dot" aria-hidden="true"></span><span id="live-text">Updated daily</span></span>
+      <a class="icon-btn" id="repo-link" href="https://github.com/DhavalVibhakar99/nyc-heat-energy-pipeline" target="_blank" rel="noopener" aria-label="Source code on GitHub">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-3.2 19.5c.5.1.7-.2.7-.5v-1.7c-2.8.6-3.4-1.3-3.4-1.3-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.5 2.4 1.1 2.9.8.1-.6.4-1.1.6-1.3-2.2-.3-4.6-1.1-4.6-5 0-1.1.4-2 1-2.7-.1-.3-.4-1.3.1-2.7 0 0 .8-.3 2.8 1a9.6 9.6 0 0 1 5 0c1.9-1.3 2.8-1 2.8-1 .5 1.4.2 2.4.1 2.7.6.7 1 1.6 1 2.7 0 3.9-2.4 4.7-4.6 5 .4.3.7.9.7 1.9V21c0 .3.2.6.7.5A10 10 0 0 0 12 2z"></path></svg>
+      </a>
+      <button class="icon-btn" id="theme-btn" type="button" aria-label="Switch to dark theme">
+        <svg viewBox="0 0 24 24" aria-hidden="true" class="i-moon"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"></path></svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true" class="i-sun"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="main" class="wrap">
+  <section class="intro">
+    <h1>Which buildings leave New Yorkers in the cold?</h1>
+    <p class="lede">Every 311 "no heat" complaint, matched to the city's energy benchmarking data for large apartment buildings. Rebuilt every morning from the source.</p>
+  </section>
+
+  <div class="filters" role="group" aria-label="Filters">
+    <label class="field">
+      <span>Heat season</span>
+      <select id="f-season"></select>
+    </label>
+    <label class="field">
+      <span>Borough</span>
+      <select id="f-boro">
+        <option value="">All boroughs</option>
+        <option>Manhattan</option><option>Bronx</option><option>Brooklyn</option><option>Queens</option><option>Staten Island</option>
+      </select>
+    </label>
+    <p class="filters-note" id="season-note"></p>
+  </div>
+
+  <div id="error" class="notice" hidden></div>
+
+  <div id="content" aria-busy="true">
+    <!-- KPIs -->
+    <section class="kpis" aria-label="Key numbers">
+      <article class="kpi kpi-hero">
+        <h2 class="kpi-label">No-heat complaints</h2>
+        <p class="kpi-value" id="k-complaints">-</p>
+        <p class="kpi-delta" id="k-complaints-delta"></p>
+        <svg class="spark" id="k-spark" aria-hidden="true"></svg>
+      </article>
+      <article class="kpi">
+        <h2 class="kpi-label">Buildings with a complaint</h2>
+        <p class="kpi-value" id="k-buildings">-</p>
+        <p class="kpi-sub" id="k-buildings-sub"></p>
+      </article>
+      <article class="kpi">
+        <h2 class="kpi-label">Median time to close</h2>
+        <p class="kpi-value" id="k-close">-</p>
+        <p class="kpi-sub" id="k-close-sub"></p>
+      </article>
+      <article class="kpi">
+        <h2 class="kpi-label">From benchmarked buildings</h2>
+        <p class="kpi-value" id="k-share">-</p>
+        <p class="kpi-sub" id="k-share-sub"></p>
+      </article>
+    </section>
+
+    <!-- Trend -->
+    <section class="card" aria-labelledby="trend-title">
+      <div class="card-head">
+        <div>
+          <h2 id="trend-title">Complaints through the season</h2>
+          <p class="card-sub" id="trend-sub">No-heat complaints per week, from October 1.</p>
+        </div>
+        <ul class="legend" id="trend-legend"></ul>
+      </div>
+      <div class="chart" id="trend-chart"></div>
+      <details class="table-view"><summary>View as table</summary><div id="trend-table"></div></details>
+    </section>
+
+    <!-- Efficiency -->
+    <section class="card" aria-labelledby="eff-title">
+      <div class="card-head">
+        <div>
+          <h2 id="eff-title">Does energy efficiency matter?</h2>
+          <p class="card-sub">No-heat complaints per 100,000 sq ft, by ENERGY STAR score (higher = more efficient). Residential buildings in LL84 only.</p>
+        </div>
+        <div class="seg" role="tablist" aria-label="Group buildings by">
+          <button type="button" role="tab" aria-selected="true" data-split="all">All</button>
+          <button type="button" role="tab" aria-selected="false" data-split="size_q">By size</button>
+          <button type="button" role="tab" aria-selected="false" data-split="era">By age</button>
+        </div>
+      </div>
+      <p class="insight" id="eff-insight"></p>
+      <div class="multiples" id="eff-chart"></div>
+      <details class="table-view"><summary>View as table</summary><div id="eff-table"></div></details>
+    </section>
+
+    <div class="grid-2">
+      <!-- Map -->
+      <section class="card" aria-labelledby="map-title">
+        <div class="card-head">
+          <div>
+            <h2 id="map-title">Where complaints come from</h2>
+            <p class="card-sub">No-heat complaints on a ~400 m grid. Larger, darker circles mean more complaints.</p>
+          </div>
+        </div>
+        <div id="map" role="img" aria-label="Map of no-heat complaint density across New York City"></div>
+      </section>
+
+      <!-- Lookup -->
+      <section class="card" aria-labelledby="lookup-title">
+        <div class="card-head">
+          <div>
+            <h2 id="lookup-title">Look up a building</h2>
+            <p class="card-sub">Large apartment buildings that report to LL84. Search by address or BBL.</p>
+          </div>
+        </div>
+        <div class="search">
+          <label for="q" class="sr-only">Address or BBL</label>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+          <input id="q" type="search" placeholder="Street address or 10-digit BBL" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="q-list" aria-autocomplete="list">
+          <ul id="q-list" role="listbox" hidden></ul>
+        </div>
+        <div id="building" class="building">
+          <p class="empty">Pick a building to see its score, its complaints this season and how it compares with buildings its size.</p>
+        </div>
+      </section>
+    </div>
+
+    <!-- Leaderboard -->
+    <section class="card" aria-labelledby="lb-title">
+      <div class="card-head">
+        <div>
+          <h2 id="lb-title">Highest complaint rates</h2>
+          <p class="card-sub">Buildings with 3 or more no-heat complaints this season, ranked per 100,000 sq ft.</p>
+        </div>
+        <label class="field field-inline">
+          <span>Min. floor area</span>
+          <select id="f-gfa">
+            <option value="25000">25K sq ft</option>
+            <option value="50000" selected>50K sq ft</option>
+            <option value="100000">100K sq ft</option>
+            <option value="250000">250K sq ft</option>
+          </select>
+        </label>
+      </div>
+      <div class="table-wrap">
+        <table class="table" id="lb">
+          <thead><tr>
+            <th scope="col">Building</th>
+            <th scope="col" class="num"><button type="button" data-sort="rate" aria-sort="descending">Per 100K sq ft</button></th>
+            <th scope="col" class="num"><button type="button" data-sort="no_heat">Complaints</button></th>
+            <th scope="col" class="num"><button type="button" data-sort="score">ENERGY STAR</button></th>
+            <th scope="col" class="num hide-sm">Built</th>
+            <th scope="col" class="num hide-sm">Floor area</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <button type="button" class="more-btn" id="lb-more" hidden>Show more</button>
+    </section>
+
+    <!-- Health + method -->
+    <div class="grid-2">
+      <section class="card" aria-labelledby="health-title">
+        <h2 id="health-title">Data health</h2>
+        <ul class="health" id="health"></ul>
+      </section>
+      <section class="card" aria-labelledby="method-title">
+        <h2 id="method-title">How it works</h2>
+        <ol class="method">
+          <li><strong>Ingest.</strong> An AWS Lambda pulls changed 311 heat complaints every morning, reconciling row counts against the city's API before anything is written.</li>
+          <li><strong>Warehouse.</strong> Files land in S3 and load into Snowflake. dbt dedupes complaints, normalizes LL84's six BBL formats and joins each complaint to the energy score that existed at the time.</li>
+          <li><strong>Test &amp; publish.</strong> GitHub Actions rebuilds every model, runs the data tests and publishes this page. If a test fails, the page keeps yesterday's data.</li>
+        </ol>
+        <p class="fine">Rates pool complaints over floor area, so one huge building can't dominate. LL84 covers large buildings only. Correlation, not causation: a regression controlling for size and age found a small effect (−1.7% complaints per 10 ENERGY STAR points, not significant at 5%). Sources: NYC Open Data <a href="https://data.cityofnewyork.us/d/erm2-nwe9" target="_blank" rel="noopener">311 Service Requests</a> and <a href="https://data.cityofnewyork.us/d/5zyy-y8am" target="_blank" rel="noopener">LL84 Energy Benchmarking</a>.</p>
+      </section>
+    </div>
+  </div>
+</main>
+
+<footer class="foot wrap">
+  <span>Built by <a href="https://github.com/DhavalVibhakar99" target="_blank" rel="noopener">Dhaval Vibhakar</a></span>
+  <a href="https://github.com/DhavalVibhakar99/nyc-heat-energy-pipeline" target="_blank" rel="noopener">Source code</a>
+</footer>
+
+<div class="tip" id="tip" role="tooltip" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
