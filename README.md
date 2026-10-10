@@ -5,6 +5,9 @@
 A daily pipeline that joins every NYC 311 heat complaint to the building's energy performance
 from Local Law 84 benchmarking, so the question can be answered with data that refreshes itself.
 
+**[Live dashboard →](https://dhavalvibhakar99.github.io/nyc-heat-energy-pipeline/)** rebuilt every morning: season trends,
+the efficiency question by building size and age, a complaint map, building lookup and the worst offenders.
+
 **Short answer:** not as a general rule. Once building size and age are accounted for, the link
 between Energy Star score and heat complaints holds only in prewar buildings. See [Findings](#findings).
 
@@ -47,7 +50,8 @@ flowchart LR
 | Staging | One row per complaint and per property; types; LL84 BBLs normalized | `dbt/models/staging`, `intermediate` |
 | Marts | Complaints fact, residential lot dimension, lot x heat-season analysis table | `dbt/models/marts` |
 | Schedule | Load new files, rebuild, run 20 tests, check freshness | `.github/workflows/daily-dbt.yml` |
-| Dashboard | Streamlit in Snowflake: trend, the Simpson's paradox, age split, worst lots, map | `dashboard/streamlit_app.py` |
+| Public dashboard | Static site on GitHub Pages, fed by aggregated JSON the daily run exports | `site/`, `dashboard/export_public.py` |
+| Internal dashboard | Streamlit in Snowflake over the same marts | `dashboard/streamlit_app.py` |
 
 ## Design choices worth knowing
 
@@ -158,6 +162,7 @@ infra/              IAM policies for the Lambda and for Snowflake's read-only S3
 snowflake/          one-time setup: warehouse, storage integration, stages, raw tables
 dbt/                staging, intermediate and mart models, tests, load_raw macro
 notebooks/          the exploration that shaped every decision above
-dashboard/          Streamlit in Snowflake app reading the marts
+dashboard/          public data export + Streamlit in Snowflake app
+site/               public dashboard (HTML/CSS/JS, no build step), published by the daily workflow
 docs/decisions.md   what was decided, when, and the evidence
 ```

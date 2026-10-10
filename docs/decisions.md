@@ -89,3 +89,14 @@ Backfilled from 2024-10 so the mart has two complete heat seasons (2024-25 vs LL
 
 **Lesson:** reconciling each API call proved every *run* was complete, not that the *dataset* was.
 Comparing totals against the source by month is what caught it.
+
+## Public dashboard: static site on GitHub Pages, not a hosted app (2026-10-10)
+The Streamlit in Snowflake app needs a Snowflake login, so recruiters and the public can't see it.
+- **Chosen:** the daily workflow exports small aggregated JSON files after `dbt build` and publishes
+  `site/` to GitHub Pages. Free, fast, no server, and no credentials anywhere near a browser
+- **Privacy:** complaint locations leave Snowflake only rounded to a ~400 m grid; building-level
+  numbers are for tax lots, the same level the city publishes LL84 and 311 at
+- **Fails safe:** if models or tests fail, nothing is published and the page keeps yesterday's data.
+  A failed freshness check alone still publishes (the data is correct, just not new)
+- **Rejected:** Streamlit Community Cloud querying Snowflake live - every visit wakes the warehouse
+  (credits) and Snowflake credentials would live in a third service

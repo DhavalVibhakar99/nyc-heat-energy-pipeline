@@ -227,3 +227,7 @@ dbt/target/
 dbt/logs/
 dbt/dbt_packages/
 dbt/.user.yml
+
+# public dashboard: the site is tracked, its data is generated daily and never committed
+!/site/
+site/data/
