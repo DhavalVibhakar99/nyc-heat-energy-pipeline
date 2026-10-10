@@ -47,6 +47,7 @@ flowchart LR
 | Staging | One row per complaint and per property; types; LL84 BBLs normalized | `dbt/models/staging`, `intermediate` |
 | Marts | Complaints fact, residential lot dimension, lot x heat-season analysis table | `dbt/models/marts` |
 | Schedule | Load new files, rebuild, run 20 tests, check freshness | `.github/workflows/daily-dbt.yml` |
+| Dashboard | Streamlit in Snowflake: trend, the Simpson's paradox, age split, worst lots, map | `dashboard/streamlit_app.py` |
 
 ## Design choices worth knowing
 
@@ -157,5 +158,6 @@ infra/              IAM policies for the Lambda and for Snowflake's read-only S3
 snowflake/          one-time setup: warehouse, storage integration, stages, raw tables
 dbt/                staging, intermediate and mart models, tests, load_raw macro
 notebooks/          the exploration that shaped every decision above
+dashboard/          Streamlit in Snowflake app reading the marts
 docs/decisions.md   what was decided, when, and the evidence
 ```
