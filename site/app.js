@@ -189,7 +189,7 @@ function renderSpark(dm, start, upto) {
   svg.replaceChildren();
   const weeks = weekly(dm, start, upto, false);
   if (weeks.length < 2) return;
-  const W = 96, H = 36, max = Math.max(...weeks.map((w) => w.v), 1);
+  const W = 100, H = 28, max = Math.max(...weeks.map((w) => w.v), 1);
   const pts = weeks.map((w, i) => [(i / (weeks.length - 1)) * W, H - (w.v / max) * (H - 4) - 2]);
   svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
   s("path", { d: "M" + pts.map((p) => p.join(",")).join("L"), fill: "none", stroke: cssVar("--accent"),
@@ -419,21 +419,17 @@ function insight(groups) {
 
 /* ---------- map ---------- */
 let map, tiles, cellsLayer;
-function tileURL() {
-  const dark = document.documentElement.dataset.theme === "dark";
-  return `https://{s}.basemaps.cartocdn.com/${dark ? "dark_all" : "light_all"}/{z}/{x}/{y}{r}.png`;
-}
+// OpenStreetMap's own tiles: free, no API key. Dark mode inverts them with CSS (styles.css).
+const TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 function renderMap() {
   if (!window.L) { $("#map").replaceChildren(h("p", { class: "empty", style: "padding:16px" }, "Map unavailable.")); return; }
   if (!map) {
     map = L.map("map", { zoomControl: true, scrollWheelZoom: false, preferCanvas: true, attributionControl: true })
       .setView([40.71, -73.94], 10);
-    tiles = L.tileLayer(tileURL(), {
-      maxZoom: 16, subdomains: "abcd",
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    tiles = L.tileLayer(TILE_URL, {
+      maxZoom: 18,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     }).addTo(map);
-  } else {
-    tiles.setUrl(tileURL());
   }
   if (cellsLayer) cellsLayer.remove();
   const cells = state.mapCells.filter((c) => c.season === state.season && boroOK(c.boro));

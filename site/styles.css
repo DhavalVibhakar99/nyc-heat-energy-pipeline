@@ -118,8 +118,10 @@ h1 { font-size: clamp(28px, 4.6vw, 44px); line-height: 1.1; letter-spacing: -0.0
 .kpi-delta strong { font-weight: 600; }
 .kpi-delta .up { color: var(--bad-ink); }
 .kpi-delta .down { color: var(--good-ink); }
-.spark { position: absolute; right: 16px; top: 18px; width: 96px; height: 36px; overflow: visible; }
-@media (max-width: 1100px) and (min-width: 961px) { .spark { display: none; } }
+/* sparkline sits on its own row under the delta, so it never collides with the number */
+.spark-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.spark { width: 100px; height: 28px; overflow: visible; flex: none; }
+.spark-label { font-size: 12px; color: var(--muted); white-space: nowrap; }
 
 /* cards */
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; min-width: 0; }
@@ -195,6 +197,9 @@ h1 { font-size: clamp(28px, 4.6vw, 44px); line-height: 1.1; letter-spacing: -0.0
 /* map */
 #map { height: 400px; border-radius: 10px; overflow: hidden; background: var(--wash); z-index: 0; }
 .leaflet-container { font: 13px var(--font); background: var(--wash); }
+/* OSM has no dark tiles: invert them in dark mode (the data circles are a separate layer, untouched) */
+:root[data-theme="dark"] .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9) saturate(0.4); }
+:root:not([data-theme="dark"]) .leaflet-tile-pane { filter: saturate(0.35) brightness(1.03); }
 .leaflet-tooltip { background: var(--raised); color: var(--ink); border: 1px solid var(--border); box-shadow: 0 4px 16px rgba(0,0,0,.14); }
 .leaflet-tooltip::before { display: none; }
 .leaflet-bar a { background: var(--raised); color: var(--ink); border-color: var(--border); }
